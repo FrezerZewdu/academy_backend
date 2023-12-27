@@ -55,7 +55,7 @@ model Module_Taken {
   moduleId Int
   module Module @relation(fields: [moduleId], references: [id])
   date DateTime
-  grade Float
+  grade Float?
 
   @@id([userId, moduleId])
 }
