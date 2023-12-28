@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class companiesFilterDto {
   search?: string | null;
@@ -17,5 +17,11 @@ export class createBillsDto {
   amount: number;
 
   @IsNotEmpty()
+  status: string;
+}
+
+export class statusDto {
+  @IsNotEmpty()
+  @IsString()
   status: string;
 }
