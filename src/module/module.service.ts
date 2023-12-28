@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { createModuleDto, editModuleDto, moduleFiltersDto } from './dto';
 
@@ -11,10 +15,12 @@ export class ModuleService {
       const modules = await this.prisma.module.findMany({
         where: {
           name: {
-            contains: filters.search ? filters.search : undefined,
+            contains: filters.search,
           },
-          level: filters.level ? filters.level : undefined,
-          trainer: filters.trainer ? filters.trainer : undefined,
+          level: filters.level,
+          trainer: {
+            contains: filters.trainer,
+          },
         },
       });
       return {
@@ -37,6 +43,9 @@ export class ModuleService {
         data: module,
       };
     } catch (error) {
+      if (error.code == 'P2002') {
+        throw new ConflictException('Course name already exists');
+      }
       console.log(error);
     }
   }
@@ -56,6 +65,9 @@ export class ModuleService {
         data: module,
       };
     } catch (error) {
+      if (error.code == 'P2025') {
+        throw new UnprocessableEntityException('Module Id does not exist');
+      }
       console.log(error);
     }
   }
@@ -72,6 +84,9 @@ export class ModuleService {
         data: module,
       };
     } catch (error) {
+      if (error.code == 'P2025') {
+        throw new UnprocessableEntityException('Module Id does not exist');
+      }
       console.log(error);
     }
   }
