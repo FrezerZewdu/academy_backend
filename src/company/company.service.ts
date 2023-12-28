@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnprocessableEntityException,
+} from '@nestjs/common';
+import * as argon from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   companiesFilterDto,
@@ -16,16 +21,45 @@ export class CompanyService {
       const companies = await this.prisma.company.findMany({
         where: {
           name: {
-            contains: filter.search ? filter.search : undefined,
+            contains: filter.search,
           },
         },
       });
-      const editedCompanies = companies.forEach((company) => {
+      companies.forEach((company) => {
         delete company.password;
       });
       return {
-        data: editedCompanies,
+        data: companies,
       };
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async companyDetailById(companyId: number) {
+    try {
+      const company = await this.prisma.company.findUnique({
+        where: {
+          id: companyId,
+        },
+        include: {
+          billings: true,
+          students: true,
+        },
+      });
+      if (company) {
+        delete company.password;
+        company.students.forEach((student) => {
+          delete student.password;
+        });
+        return {
+          data: company,
+        };
+      } else {
+        return {
+          data: null,
+        };
+      }
     } catch (error) {
       console.log(error);
     }
@@ -33,9 +67,14 @@ export class CompanyService {
 
   async createCompany(companyInfo: createCompanyDto) {
     try {
+      const password = await argon.hash(companyInfo.password);
       const company = await this.prisma.company.create({
         data: {
-          ...companyInfo,
+          name: companyInfo.name,
+          password,
+          contactPerson: companyInfo.contactPerson,
+          email: companyInfo.email,
+          phoneNumber: companyInfo.phoneNumber,
         },
       });
       delete company.password;
@@ -44,7 +83,9 @@ export class CompanyService {
         data: company,
       };
     } catch (error) {
-      console.log(error);
+      if (error.code == 'P2002') {
+        throw new ConflictException('Email already exists');
+      }
     }
   }
 
@@ -57,13 +98,23 @@ export class CompanyService {
         data: {
           ...companyInfo,
         },
+        include: {
+          billings: true,
+          students: true,
+        },
       });
       delete company.password;
+      company.students.forEach((student) => {
+        delete student.password;
+      });
       return {
         messsage: 'Company updated Successfully',
         data: company,
       };
     } catch (error) {
+      if (error.code == 'P2025') {
+        throw new UnprocessableEntityException('Company Id does not exist');
+      }
       console.log(error);
     }
   }
@@ -110,6 +161,9 @@ export class CompanyService {
         data: bill,
       };
     } catch (error) {
+      if (error.code == 'P2025') {
+        throw new UnprocessableEntityException('Company Id does not exist');
+      }
       console.log(error);
     }
   }
@@ -128,6 +182,9 @@ export class CompanyService {
         data: bill,
       };
     } catch (error) {
+      if (error.code == 'P2025') {
+        throw new UnprocessableEntityException('Bill Id does not exist');
+      }
       console.log(error);
     }
   }
